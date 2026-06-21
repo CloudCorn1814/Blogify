@@ -8,7 +8,7 @@ import (
 
 const (
 	HOST = "postgres"
-	PORT = "8080"
+	PORT = "5432"
 )
 
 type Database struct {
