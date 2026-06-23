@@ -7,12 +7,26 @@ import (
 	"Blogify/internal/blog/service"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	db, err := db.InitDB("user", "password", "db")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	PostgresPort := os.Getenv("POSTGRES_PORT")
+	PostgresHost := os.Getenv("POSTGRES_HOST")
+	LocalPort := os.Getenv("PORT")
+	Username := os.Getenv("USERNAME")
+	Password := os.Getenv("PASSWORD")
+	DB := os.Getenv("DB")
+
+	db, err := db.InitDB(PostgresPort, PostgresHost, Username, Password, DB)
 	if err != nil {
 		log.Fatalf("Could not set up database: %v", err)
 	}
@@ -28,7 +42,7 @@ func main() {
 	r.Get("/article/{articleID}", handler.HandleGet)
 	r.Delete("/article/{articleID}", handler.HandleDelete)
 
-	err = http.ListenAndServe(":8080", r)
+	err = http.ListenAndServe(LocalPort, r)
 	if err != nil {
 		log.Fatal("server start error")
 	}

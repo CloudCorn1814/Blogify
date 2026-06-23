@@ -6,19 +6,14 @@ import (
 	"log"
 )
 
-const (
-	HOST = "postgres"
-	PORT = "5432"
-)
-
 type Database struct {
 	Conn *sql.DB
 }
 
-func InitDB(user, password, database string) (Database, error) {
+func InitDB(host, port, user, password, database string) (Database, error) {
 	db := Database{}
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s", HOST, PORT, user, password, database)
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s", host, port, user, password, database)
 	conn, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return db, err
