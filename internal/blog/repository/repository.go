@@ -45,7 +45,7 @@ func (r *Repository) GetArticle(ID int) (*entity.Article, error) {
 	return &article, nil
 }
 
-func (r *Repository) GetArticleAll() (*[]entity.Article, error) {
+func (r *Repository) GetArticleAll() ([]entity.Article, error) {
 	query := `SELECT * FROM articles`
 	rows, err := r.db.Conn.Query(query)
 	if err != nil {
@@ -60,7 +60,7 @@ func (r *Repository) GetArticleAll() (*[]entity.Article, error) {
 		}
 		articles = append(articles, article)
 	}
-	return &articles, nil
+	return articles, nil
 }
 
 func (r *Repository) DeleteArticle(ID int) error {
