@@ -4,6 +4,7 @@ import (
 	"Blogify/internal/blog/entity"
 	"Blogify/internal/blog/service"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -22,7 +23,7 @@ func urlID(w http.ResponseWriter, r *http.Request, url string) (int, error) {
 	id, err := strconv.Atoi(chi.URLParam(r, url))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return 0, err
+		return 0, fmt.Errorf("ID fetch error: %w", err)
 	}
 	return id, nil
 }
