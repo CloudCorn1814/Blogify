@@ -4,7 +4,6 @@ import (
 	"Blogify/internal/blog/entity"
 	"Blogify/internal/blog/service"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -17,15 +16,6 @@ type Handler struct {
 
 func NewHandler(service *service.Service) *Handler {
 	return &Handler{service: service}
-}
-
-func urlID(w http.ResponseWriter, r *http.Request, url string) (int, error) {
-	id, err := strconv.Atoi(chi.URLParam(r, url))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return 0, fmt.Errorf("ID fetch error: %w", err)
-	}
-	return id, nil
 }
 
 func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
@@ -54,11 +44,12 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	articleID, err := urlID(w, r, "articleID")
+	articleID, err := strconv.Atoi(chi.URLParam(r, "articleID"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	articleBuild := entity.Article{
 		ID:     articleID,
 		Author: articleRequest.Author,
@@ -78,7 +69,7 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) {
-	articleID, err := urlID(w, r, "articleID")
+	articleID, err := strconv.Atoi(chi.URLParam(r, "articleID"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -109,7 +100,7 @@ func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleDelete(w http.ResponseWriter, r *http.Request) {
-	articleID, err := urlID(w, r, "articleID")
+	articleID, err := strconv.Atoi(chi.URLParam(r, "articleID"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
