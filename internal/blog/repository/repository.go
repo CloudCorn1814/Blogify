@@ -51,6 +51,8 @@ func (r *Repository) GetArticleAll() ([]entity.Article, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	var articles []entity.Article
 	for rows.Next() {
 		var article entity.Article

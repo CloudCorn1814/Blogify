@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -46,13 +47,15 @@ func (s *Service) LoginUser(login, password string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("login error: %w", err)
 	}
+	expire := time.Now().Add(24 * time.Hour).Unix()
 	if !CheckPasswordHash(password, hash) {
 		return "", errors.New("password is invalid")
 	}
 	key := os.Getenv("KEY")
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
-			"id": id,
+			"id":  id,
+			"exp": expire,
 		},
 	)
 	signet, err := t.SignedString([]byte(key))

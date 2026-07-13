@@ -8,14 +8,16 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi"
+	"github.com/go-playground/validator/v10"
 )
 
 type Handler struct {
-	service *service.Service
+	service  *service.Service
+	validate *validator.Validate
 }
 
 func NewHandler(service *service.Service) *Handler {
-	return &Handler{service: service}
+	return &Handler{service: service, validate: validator.New(validator.WithRequiredStructEnabled())}
 }
 
 func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +27,12 @@ func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	article, err := h.service.CreateArticle(articleRequest.Author, articleRequest.Text, articleRequest.Topic)
+	err = h.validate.Struct(articleRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	article, err := h.service.CreateArticle(articleRequest.Author, articleRequest.Topic, articleRequest.Text)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -34,12 +41,18 @@ func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(article)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
 func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	var articleRequest updateArticleArticleRequest
 	err := json.NewDecoder(r.Body).Decode(&articleRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = h.validate.Struct(articleRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -65,6 +78,7 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(article)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -83,6 +97,7 @@ func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(article)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -96,6 +111,7 @@ func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(articles)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -115,5 +131,6 @@ func (h *Handler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode("article deleted")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }

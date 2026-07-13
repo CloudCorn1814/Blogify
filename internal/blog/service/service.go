@@ -3,12 +3,7 @@ package service
 import (
 	"Blogify/internal/blog/entity"
 	"Blogify/internal/blog/repository"
-	"errors"
 	"fmt"
-)
-
-var (
-	errorEmptyField = errors.New("field empty")
 )
 
 type Service struct {
@@ -20,9 +15,6 @@ func NewService(repo *repository.Repository) *Service {
 }
 
 func (s *Service) CreateArticle(author, topic, text string) (*entity.Article, error) {
-	if author == "" || topic == "" || text == "" {
-		return nil, errorEmptyField
-	}
 	article, err := s.repo.CreateArticle(author, topic, text)
 	if err != nil {
 		return nil, fmt.Errorf("article creation error: %w", err)
