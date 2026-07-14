@@ -1,8 +1,10 @@
 package main
 
 import (
+	"Blogify/contracts/gen/Blogify/contracts/gen"
 	"Blogify/db"
 	"Blogify/internal/blog/handler"
+	"Blogify/internal/blog/middleware"
 	"Blogify/internal/blog/repository"
 	"Blogify/internal/blog/service"
 	"log"
@@ -11,6 +13,8 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/joho/godotenv"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -35,12 +39,22 @@ func main() {
 	srvs := service.NewService(repo)
 	handler := handler.NewHandler(srvs)
 
+	conn, err := grpc.NewClient(os.Getenv("gRPC_server"), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("invalid grpc conn: %v", err)
+	}
+	client := gen.NewAuthClient(conn)
+	middleware := middleware.NewMiddleware(client)
 	r := chi.NewRouter()
-	r.Post("/article", handler.HandleCreate)
-	r.Get("/article", handler.HandleGetAll)
-	r.Put("/article/{articleID}", handler.HandleUpdate)
-	r.Get("/article/{articleID}", handler.HandleGet)
-	r.Delete("/article/{articleID}", handler.HandleDelete)
+	r.Use(middleware.AuthMiddleware)
+
+	r.Route("/article", func(r chi.Router) {
+		r.Post("/", handler.HandleCreate)
+		r.Get("/", handler.HandleGetAll)
+		r.Put("/{articleID}", handler.HandleUpdate)
+		r.Get("/{articleID}", handler.HandleGet)
+		r.Delete("/{articleID}", handler.HandleDelete)
+	})
 
 	err = http.ListenAndServe(LocalPort, r)
 	if err != nil {

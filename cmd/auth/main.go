@@ -42,8 +42,10 @@ func main() {
 	gen.RegisterAuthServer(grpcServer, server.NewServer(srvs))
 
 	r := chi.NewRouter()
-	r.Post("/sign_in", handler.HandleCreate)
-	r.Post("/login", handler.HandleLogin)
+	r.Route("/api/v1/auth", func(r chi.Router) {
+		r.Post("/register", handler.HandleCreate)
+		r.Post("/login", handler.HandleLogin)
+	})
 
 	go func() {
 		lis, err := net.Listen("tcp", ":9090")
