@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "Blogify/contracts/gen";
+
+service Auth {
+    rpc CheckCreds(CheckRequest) returns (CheckResponse);
+}
+
+message CheckRequest {
+    string token = 1;
+}
+
+message CheckResponse {
+    int64 id = 1;
+}

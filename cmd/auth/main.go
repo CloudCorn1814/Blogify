@@ -3,18 +3,18 @@ package main
 import (
 	"Blogify/contracts/gen/Blogify/contracts/gen"
 	"Blogify/db"
-	"Blogify/internal/blog/handler"
-	"Blogify/internal/blog/middleware"
-	"Blogify/internal/blog/repository"
-	"Blogify/internal/blog/service"
+	"Blogify/internal/auth/handler"
+	"Blogify/internal/auth/repository"
+	"Blogify/internal/auth/server"
+	"Blogify/internal/auth/service"
 	"log"
+	"net"
 	"net/http"
 	"os"
 
 	"github.com/go-chi/chi"
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -38,28 +38,22 @@ func main() {
 	repo := repository.NewRepository(db)
 	srvs := service.NewService(repo)
 	handler := handler.NewHandler(srvs)
+	grpcServer := grpc.NewServer()
+	gen.RegisterAuthServer(grpcServer, server.NewServer(srvs))
 
-	conn, err := grpc.NewClient(os.Getenv("gRPC_server"), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("invalid grpc conn: %v", err)
-	}
-	client := gen.NewAuthClient(conn)
-	middleware := middleware.NewMiddleware(client)
 	r := chi.NewRouter()
-
-	r.Route("/article", func(r chi.Router) {
-		r.Get("/", handler.HandleGetAll)
-		r.Get("/{articleID}", handler.HandleGet)
+	r.Route("/api/v1/auth", func(r chi.Router) {
+		r.Post("/register", handler.HandleCreate)
+		r.Post("/login", handler.HandleLogin)
 	})
 
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware)
-		r.Route("/article", func(r chi.Router) {
-			r.Post("/", handler.HandleCreate)
-			r.Put("/{articleID}", handler.HandleUpdate)
-			r.Delete("/{articleID}", handler.HandleDelete)
-		})
-	})
+	go func() {
+		lis, err := net.Listen("tcp", ":9090")
+		if err != nil {
+			log.Fatal(err)
+		}
+		grpcServer.Serve(lis)
+	}()
 
 	err = http.ListenAndServe(LocalPort, r)
 	if err != nil {

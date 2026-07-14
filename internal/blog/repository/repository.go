@@ -17,7 +17,7 @@ func NewRepository(db db.Database) *Repository {
 func (r *Repository) CreateArticle(author, topic, text string) (*entity.Article, error) {
 	var id int
 	var createdAt time.Time
-	query := `INSERT INTO articles (author, topic, text) VALUES ($1, $2, $3) RETURNING id, created_at`
+	query := `INSERT INTO articles (author, topic, content) VALUES ($1, $2, $3) RETURNING id, posted_time`
 	err := r.db.Conn.QueryRow(query, author, topic, text).Scan(&id, &createdAt)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (r *Repository) CreateArticle(author, topic, text string) (*entity.Article,
 
 func (r *Repository) UpdateArticle(article entity.Article) (*entity.Article, error) {
 	var changedAt time.Time
-	query := `UPDATE articles SET author=$1, topic=$2, text=$3 WHERE id=$4 RETURNING changed_at`
+	query := `UPDATE articles SET author=$1, topic=$2, content=$3 WHERE id=$4 RETURNING posted_time`
 	err := r.db.Conn.QueryRow(query, article.Author, article.Topic, article.Text, article.ID).Scan(&changedAt)
 	if err != nil {
 		return nil, err
@@ -45,12 +45,14 @@ func (r *Repository) GetArticle(ID int) (*entity.Article, error) {
 	return &article, nil
 }
 
-func (r *Repository) GetArticleAll() (*[]entity.Article, error) {
+func (r *Repository) GetArticleAll() ([]entity.Article, error) {
 	query := `SELECT * FROM articles`
 	rows, err := r.db.Conn.Query(query)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	var articles []entity.Article
 	for rows.Next() {
 		var article entity.Article
@@ -60,7 +62,7 @@ func (r *Repository) GetArticleAll() (*[]entity.Article, error) {
 		}
 		articles = append(articles, article)
 	}
-	return &articles, nil
+	return articles, nil
 }
 
 func (r *Repository) DeleteArticle(ID int) error {
