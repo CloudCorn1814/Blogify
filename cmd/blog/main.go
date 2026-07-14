@@ -46,14 +46,19 @@ func main() {
 	client := gen.NewAuthClient(conn)
 	middleware := middleware.NewMiddleware(client)
 	r := chi.NewRouter()
-	r.Use(middleware.AuthMiddleware)
 
 	r.Route("/article", func(r chi.Router) {
-		r.Post("/", handler.HandleCreate)
 		r.Get("/", handler.HandleGetAll)
-		r.Put("/{articleID}", handler.HandleUpdate)
 		r.Get("/{articleID}", handler.HandleGet)
-		r.Delete("/{articleID}", handler.HandleDelete)
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware)
+		r.Route("/article", func(r chi.Router) {
+			r.Post("/", handler.HandleCreate)
+			r.Put("/{articleID}", handler.HandleUpdate)
+			r.Delete("/{articleID}", handler.HandleDelete)
+		})
 	})
 
 	err = http.ListenAndServe(LocalPort, r)
