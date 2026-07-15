@@ -2,6 +2,7 @@ package service
 
 import (
 	"Blogify/internal/auth/entity"
+	"Blogify/internal/auth/producer"
 	"Blogify/internal/auth/repository"
 	"errors"
 	"fmt"
@@ -13,11 +14,12 @@ import (
 )
 
 type Service struct {
-	repo *repository.Repository
+	repo     *repository.Repository
+	producer *producer.Producer
 }
 
-func NewService(repo *repository.Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo *repository.Repository, producer *producer.Producer) *Service {
+	return &Service{repo: repo, producer: producer}
 }
 
 func HashPassword(password string) (string, error) {
@@ -38,6 +40,10 @@ func (s *Service) CreateUser(login, password string) (*entity.User, error) {
 	user, err := s.repo.CreateUser(login, pwd)
 	if err != nil {
 		return nil, fmt.Errorf("user creation error: %w", err)
+	}
+	err = s.producer.SendMessage("user.registered", login)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong: %w", err)
 	}
 	return user, nil
 }

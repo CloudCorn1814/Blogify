@@ -4,6 +4,7 @@ import (
 	"Blogify/contracts/gen/Blogify/contracts/gen"
 	"Blogify/db"
 	"Blogify/internal/auth/handler"
+	"Blogify/internal/auth/producer"
 	"Blogify/internal/auth/repository"
 	"Blogify/internal/auth/server"
 	"Blogify/internal/auth/service"
@@ -36,7 +37,13 @@ func main() {
 	}
 
 	repo := repository.NewRepository(db)
-	srvs := service.NewService(repo)
+	producer, err := producer.NewProducer(os.Getenv("KAFKA"))
+	if err != nil {
+		log.Fatalf("producer init error: %v", err)
+	}
+	defer producer.Close()
+
+	srvs := service.NewService(repo, producer)
 	handler := handler.NewHandler(srvs)
 	grpcServer := grpc.NewServer()
 	gen.RegisterAuthServer(grpcServer, server.NewServer(srvs))
