@@ -30,7 +30,7 @@ func main() {
 	Password := os.Getenv("PASSWORD")
 	DB := os.Getenv("DB")
 
-	db, err := db.InitDB(PostgresPort, PostgresHost, Username, Password, DB)
+	db, err := db.InitDB(PostgresHost, PostgresPort, Username, Password, DB)
 	if err != nil {
 		log.Fatalf("Could not set up database: %v", err)
 	}

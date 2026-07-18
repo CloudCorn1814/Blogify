@@ -1,6 +1,61 @@
 version: '4.78'
 services:
- postgres:
- blog:
- kafka:
+ postgres:  
+  image: postgres:18
+  restart: always
+  environment:
+    POSTGRES_USER: "Blogify"
+    POSTGRES_PASSWORD: "Blogify_password"
+    POSTGRES_DB: "Blogify_db"
+  ports:
+    - "5432:5432"
+  volumes:
+    - data:/var/lib/postgresql/data
  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+    - "2181:2181"
+ kafka:
+  image: confluentinc/cp-kafka:7.4.0
+  depends_on:
+    - zookeeper
+  ports:
+    - "9092:9092"
+  environment:
+    KAFKA_BROKER_ID: 1
+    KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+    KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+ blog:
+  build: 
+    context: .
+    args:
+      SERVICE: blog
+  ports: 
+    - "8032:8032"
+  depends_on:
+    - postgres
+    - kafka
+    - auth
+ auth:
+   build: 
+     context: .
+     args:
+       SERVICE: auth
+   ports:
+    - "8033:8033"
+   depends_on:
+    - postgres
+    - kafka
+ notification:
+    build:
+      context: .
+      args:
+        SERVICE: notification
+    depends_on:
+      - kafka
+      - auth
+volumes:
+  data:
