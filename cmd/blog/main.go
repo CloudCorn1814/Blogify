@@ -7,9 +7,13 @@ import (
 	"Blogify/internal/blog/middleware"
 	"Blogify/internal/blog/repository"
 	"Blogify/internal/blog/service"
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/joho/godotenv"
@@ -60,9 +64,23 @@ func main() {
 			r.Delete("/{articleID}", handler.HandleDelete)
 		})
 	})
+	srv := &http.Server{Addr: LocalPort, Handler: r}
+	go func() {
+		err = srv.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal("server start error")
+		}
+	}()
 
-	err = http.ListenAndServe(LocalPort, r)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+	log.Println("Shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = srv.Shutdown(ctx)
 	if err != nil {
-		log.Fatal("server start error")
+		log.Fatal("server shutdown error")
 	}
 }

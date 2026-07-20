@@ -8,10 +8,14 @@ import (
 	"Blogify/internal/auth/repository"
 	"Blogify/internal/auth/server"
 	"Blogify/internal/auth/service"
+	"context"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/joho/godotenv"
@@ -61,9 +65,26 @@ func main() {
 		}
 		grpcServer.Serve(lis)
 	}()
+	srv := &http.Server{Addr: LocalPort, Handler: r}
+	go func() {
+		err = srv.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal("server start error")
+		}
+	}()
 
-	err = http.ListenAndServe(LocalPort, r)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+	log.Println("Shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	grpcServer.GracefulStop()
+
+	err = srv.Shutdown(ctx)
 	if err != nil {
-		log.Fatal("server start error")
+		log.Fatal("server shutdown error")
 	}
 }
