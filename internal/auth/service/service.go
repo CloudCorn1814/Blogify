@@ -14,12 +14,15 @@ import (
 )
 
 type Service struct {
-	repo     *repository.Repository
-	producer *producer.Producer
+	repository *repository.Repository
+	producer   *producer.Producer
 }
 
-func NewService(repo *repository.Repository, producer *producer.Producer) *Service {
-	return &Service{repo: repo, producer: producer}
+func NewService(repository *repository.Repository, producer *producer.Producer) *Service {
+	return &Service{
+		repository: repository,
+		producer:   producer,
+	}
 }
 
 func HashPassword(password string) (string, error) {
@@ -37,7 +40,7 @@ func (s *Service) CreateUser(login, password string) (*entity.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("hashing error: %w", err)
 	}
-	user, err := s.repo.CreateUser(login, pwd)
+	user, err := s.repository.CreateUser(login, pwd)
 	if err != nil {
 		return nil, fmt.Errorf("user creation error: %w", err)
 	}
@@ -49,7 +52,7 @@ func (s *Service) CreateUser(login, password string) (*entity.User, error) {
 }
 
 func (s *Service) LoginUser(login, password string) (string, error) {
-	id, hash, err := s.repo.LoginUser(login)
+	id, hash, err := s.repository.LoginUser(login)
 	if err != nil {
 		return "", fmt.Errorf("login error: %w", err)
 	}
