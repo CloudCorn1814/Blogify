@@ -23,11 +23,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
+	godotenv.Load()
 	PostgresPort := os.Getenv("POSTGRES_PORT")
 	PostgresHost := os.Getenv("POSTGRES_HOST")
 	LocalPort := os.Getenv("PORT")

@@ -6,9 +6,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	godotenv.Load()
 	consumer, err := consumer.NewConsumer(os.Getenv("KAFKA"))
 	if err != nil {
 		log.Fatalf("consumer init error: %v", err)

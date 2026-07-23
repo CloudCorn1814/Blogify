@@ -20,7 +20,7 @@ func NewProducer(addr string) (*Producer, error) {
 	config.Producer.Return.Successes = true
 	producer, err := sarama.NewSyncProducer([]string{addr}, config)
 	if err != nil {
-		log.Fatalf("error creating producer: %v", err)
+		return nil, fmt.Errorf("error creating producer: %v", err)
 	}
 	return &Producer{producer: producer}, nil
 

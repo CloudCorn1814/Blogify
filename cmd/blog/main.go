@@ -22,11 +22,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
+	godotenv.Load()
 	PostgresPort := os.Getenv("POSTGRES_PORT")
 	PostgresHost := os.Getenv("POSTGRES_HOST")
 	LocalPort := os.Getenv("PORT")
@@ -50,20 +46,14 @@ func main() {
 	client := gen.NewAuthClient(conn)
 	middleware := middleware.NewMiddleware(client)
 	r := chi.NewRouter()
-
 	r.Route("/article", func(r chi.Router) {
 		r.Get("/", handler.HandleGetAll)
 		r.Get("/{articleID}", handler.HandleGet)
+		r.With(middleware.AuthMiddleware).Post("/", handler.HandleCreate)
+		r.With(middleware.AuthMiddleware).Put("/{articleID}", handler.HandleUpdate)
+		r.With(middleware.AuthMiddleware).Delete("/{articleID}", handler.HandleDelete)
 	})
 
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware)
-		r.Route("/article", func(r chi.Router) {
-			r.Post("/", handler.HandleCreate)
-			r.Put("/{articleID}", handler.HandleUpdate)
-			r.Delete("/{articleID}", handler.HandleDelete)
-		})
-	})
 	srv := &http.Server{Addr: LocalPort, Handler: r}
 	go func() {
 		err = srv.ListenAndServe()
