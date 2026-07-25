@@ -7,9 +7,13 @@ import (
 	"Blogify/internal/blog/middleware"
 	"Blogify/internal/blog/repository"
 	"Blogify/internal/blog/service"
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/joho/godotenv"
@@ -18,11 +22,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
+	godotenv.Load()
 	PostgresPort := os.Getenv("POSTGRES_PORT")
 	PostgresHost := os.Getenv("POSTGRES_HOST")
 	LocalPort := os.Getenv("PORT")
@@ -30,7 +30,7 @@ func main() {
 	Password := os.Getenv("PASSWORD")
 	DB := os.Getenv("DB")
 
-	db, err := db.InitDB(PostgresPort, PostgresHost, Username, Password, DB)
+	db, err := db.InitDB(PostgresHost, PostgresPort, Username, Password, DB)
 	if err != nil {
 		log.Fatalf("Could not set up database: %v", err)
 	}
@@ -46,23 +46,31 @@ func main() {
 	client := gen.NewAuthClient(conn)
 	middleware := middleware.NewMiddleware(client)
 	r := chi.NewRouter()
-
 	r.Route("/article", func(r chi.Router) {
 		r.Get("/", handler.HandleGetAll)
 		r.Get("/{articleID}", handler.HandleGet)
+		r.With(middleware.AuthMiddleware).Post("/", handler.HandleCreate)
+		r.With(middleware.AuthMiddleware).Put("/{articleID}", handler.HandleUpdate)
+		r.With(middleware.AuthMiddleware).Delete("/{articleID}", handler.HandleDelete)
 	})
 
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware)
-		r.Route("/article", func(r chi.Router) {
-			r.Post("/", handler.HandleCreate)
-			r.Put("/{articleID}", handler.HandleUpdate)
-			r.Delete("/{articleID}", handler.HandleDelete)
-		})
-	})
+	srv := &http.Server{Addr: LocalPort, Handler: r}
+	go func() {
+		err = srv.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal("server start error")
+		}
+	}()
 
-	err = http.ListenAndServe(LocalPort, r)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+	log.Println("Shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = srv.Shutdown(ctx)
 	if err != nil {
-		log.Fatal("server start error")
+		log.Fatal("server shutdown error")
 	}
 }

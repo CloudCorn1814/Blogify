@@ -30,6 +30,6 @@ func (s *Server) Check(ctx context.Context, req *gen.CheckRequest) (*gen.CheckRe
 	if !ok {
 		return nil, fmt.Errorf("invalid claims")
 	}
-	userID := claims["id"].(int64)
+	userID := int64(claims["id"].(float64))
 	return &gen.CheckResponse{Id: userID}, nil
 }

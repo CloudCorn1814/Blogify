@@ -1,6 +1,120 @@
-version: '4.78'
 services:
- postgres:
- blog:
- kafka:
- zookeeper:
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: Blogify
+      POSTGRES_PASSWORD: Blogify_password
+      POSTGRES_DB: Blogify_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Blogify -d Blogify_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  migrate:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./:/app
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        go install github.com/pressly/goose/v3/cmd/goose@latest
+        goose -dir ./db/migrations postgres \
+          "user=$$USERNAME password=$$PASSWORD host=$$POSTGRES_HOST port=$$POSTGRES_PORT dbname=$$DB sslmode=disable" up
+
+  blog:
+    env_file: .env
+    environment:
+      PORT: ":8032"
+      POSTGRES_HOST: postgres
+      gRPC_server: auth:9090
+      KAFKA: kafka:29092
+    build:
+      context: .
+      args:
+        SERVICE: blog
+    ports:
+      - "8032:8032"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      auth:
+        condition: service_started
+      kafka:
+        condition: service_started
+
+  auth:
+    env_file: .env
+    environment:
+      PORT: ":8033"
+      POSTGRES_HOST: postgres
+      KAFKA: kafka:29092
+    build:
+      context: .
+      args:
+        SERVICE: auth
+    ports:
+      - "8033:8033"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+
+  notification:
+    env_file: .env
+    environment:
+      KAFKA: kafka:29092
+    build:
+      context: .
+      args:
+        SERVICE: notification
+    depends_on:
+      kafka:
+        condition: service_started
+      auth:
+        condition: service_started
+
+volumes:
+  data:
